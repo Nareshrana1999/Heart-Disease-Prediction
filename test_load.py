@@ -3,7 +3,7 @@ import os
 
 try:
     print("Trying to load data file...")
-    file_path = os.path.join('data', 'heart_disease_cleveland.csv')
+    file_path = os.path.join('data', 'heart_disease.csv')
     print(f"Looking for file at: {os.path.abspath(file_path)}")
     
     if os.path.exists(file_path):
