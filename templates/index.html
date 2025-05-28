@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Disease Prediction</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; color: #333; }
+        .card { border-radius: 15px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); margin-bottom: 20px; border: none; }
+        .card-header { 
+            background: linear-gradient(135deg, #ff6b6b, #ff8e8e); 
+            color: white; 
+            border-radius: 15px 15px 0 0 !important; 
+            padding: 15px 20px; 
+            font-weight: 600; 
+        }
+        .form-label { font-weight: 500; margin-bottom: 0.3rem; }
+        .form-control, .form-select { 
+            border-radius: 0.375rem; 
+            padding: 0.5rem 0.75rem; 
+            border: 1px solid #ddd; 
+            margin-bottom: 15px; 
+        }
+        .input-group-text {
+            background-color: #f8f9fa;
+            border-left: none;
+        }
+        .form-control:focus + .input-group-text {
+            border-color: #86b7fe;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .card {
+            border-radius: 0.75rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+        }
+        .card-header {
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+            background-color: #f8f9fa;
+            border-bottom: 1px solid rgba(0,0,0,.125);
+        }
+        .btn-primary {
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+        }
+        .tooltip-inner {
+            max-width: 300px;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+        }
+        .btn-predict { 
+            background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+            border: none; 
+            padding: 15px 40px; 
+            font-weight: 600; 
+            border-radius: 8px; 
+            margin: 20px auto; 
+            transition: all 0.3s;
+            display: block;
+            max-width: 400px;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-predict:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(13, 110, 253, 0.3);
+            color: white;
+        }
+        .btn-predict:hover { 
+            transform: translateY(-2px); 
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3); 
+        }
+        .result-card { display: none; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(20px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+        .risk-high { color: #dc3545; font-weight: 600; }
+        .risk-low { color: #28a745; font-weight: 600; }
+        .feature-tooltip { cursor: help; border-bottom: 1px dashed #666; }
+        .risk-factors { list-style-type: none; padding-left: 0; }
+        .risk-factors li { padding: 5px 0; border-bottom: 1px solid #eee; }
+        .risk-factors li:last-child { border-bottom: none; }
+        .progress { height: 10px; margin: 10px 0; border-radius: 5px; }
+        .progress-bar { background: linear-gradient(90deg, #28a745, #ffc107, #dc3545); }
+        .model-accuracy { font-size: 0.9em; color: #6c757d; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card">
+                    <div class="card-header text-center">
+                        <h2>Heart Disease Risk Prediction</h2>
+                        <p class="mb-0">Enter patient details to assess the risk of heart disease</p>
+                    </div>
+                    <div class="card-body p-4">
+                        <form id="predictionForm">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <!-- Form fields will be populated by JavaScript -->
+                                </div>
+                                <div class="col-md-6">
+                                    <!-- Form fields will be populated by JavaScript -->
+                                </div>
+                            </div>
+                            
+                            <!-- Submit Button -->
+                            <div class="row mt-4">
+                                <div class="col-12 text-center">
+                                    <button type="submit" class="btn btn-primary btn-lg btn-predict" style="padding: 12px 30px; font-size: 1.2rem;">
+                                        <i class="bi bi-heart-pulse me-2"></i>Predict Heart Disease Risk
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        
+                        <!-- Results Section -->
+                        <div id="resultCard" class="card mt-4 result-card">
+                            <div class="card-header" style="background: linear-gradient(135deg, #6c5ce7, #a29bfe);">
+                                <h4 class="mb-0 text-white">Prediction Results</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center mb-4">
+                                    <h3 id="predictionText" class="mb-3"></h3>
+                                    <div class="progress">
+                                        <div id="riskBar" class="progress-bar" role="progressbar" style="width: 0%"></div>
+                                    </div>
+                                    <div id="riskPercentage" class="fw-bold mt-2">0%</div>
+                                </div>
+                                
+                                <div id="riskFactors" class="mb-4">
+                                    <h5>Risk Factors:</h5>
+                                    <ul id="riskFactorsList" class="risk-factors">
+                                        <!-- Risk factors will be populated here -->
+                                    </ul>
+                                </div>
+                                
+                                <div class="model-details">
+                                    <h5>Model Confidence:</h5>
+                                    <div id="modelPredictions">
+                                        <!-- Model predictions will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center mt-4 text-muted">
+                    <small>This tool provides risk assessment only and is not a substitute for professional medical advice.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Enable tooltips everywhere
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl, {
+                trigger: 'hover focus',
+                html: true
+            });
+        });
+    </script>
+    
+    <script>
+        // Feature names, descriptions and detailed help text
+        const featureNames = [
+            'age', 'sex', 'cp', 'trestbps', 'chol', 'fbs', 'restecg',
+            'thalach', 'exang', 'oldpeak', 'slope', 'ca', 'thal'
+        ];
+
+        const featureLabels = {
+            'age': 'Age',
+            'sex': 'Gender',
+            'cp': 'Chest Pain Type',
+            'trestbps': 'Resting Blood Pressure',
+            'chol': 'Cholesterol Level',
+            'fbs': 'Fasting Blood Sugar',
+            'restecg': 'Resting ECG Results',
+            'thalach': 'Maximum Heart Rate',
+            'exang': 'Exercise Induced Chest Pain',
+            'oldpeak': 'ST Depression',
+            'slope': 'ST Segment Slope',
+            'ca': 'Number of Major Vessels',
+            'thal': 'Thalassemia Test'
+        };
+
+        const featureDescriptions = {
+            'age': 'Age of the patient in years. Heart disease risk increases with age, especially after 45 for men and 55 for women.',
+            'sex': 'Biological sex of the patient. Men are generally at higher risk of heart disease than pre-menopausal women.',
+            'cp': 'Type of chest pain experienced. This helps identify if the pain is related to reduced blood flow to the heart.',
+            'trestbps': 'Resting blood pressure in mm Hg. Normal is around 120/80. High blood pressure increases heart disease risk.',
+            'chol': 'Serum cholesterol in mg/dl. Desirable level is under 200 mg/dl. High cholesterol can lead to artery blockages.',
+            'fbs': 'Fasting blood sugar level. Values >120 mg/dl may indicate diabetes, a risk factor for heart disease.',
+            'restecg': 'Results of resting electrocardiogram. Shows heart\'s electrical activity at rest.',
+            'thalach': 'Maximum heart rate achieved during exercise. Lower maximum heart rate can indicate heart disease.',
+            'exang': 'Chest pain during exercise. Pain during physical activity may indicate reduced blood flow to the heart.',
+            'oldpeak': 'ST depression induced by exercise relative to rest. Measures abnormal heart activity during exercise.',
+            'slope': 'The slope of the peak exercise ST segment. Abnormal slopes can indicate heart disease.',
+            'ca': 'Number of major blood vessels (0-3) colored by fluoroscopy. More blocked vessels indicate higher risk.',
+            'thal': 'Thalassemia test results. This blood disorder can affect heart function.'
+        };
+
+        const featureOptions = {
+            'sex': [
+                { value: '0', label: 'Female', description: 'Female (biological sex)' },
+                { value: '1', label: 'Male', description: 'Male (biological sex)' }
+            ],
+            'cp': [
+                { value: '0', label: 'Typical Angina', description: 'Chest pain caused by reduced blood flow to the heart' },
+                { value: '1', label: 'Atypical Angina', description: 'Chest pain not meeting typical angina characteristics' },
+                { value: '2', label: 'Non-anginal Pain', description: 'Chest pain not related to the heart' },
+                { value: '3', label: 'Asymptomatic', description: 'No chest pain experienced' }
+            ],
+            'fbs': [
+                { value: '0', label: '≤ 120 mg/dl', description: 'Normal fasting blood sugar level' },
+                { value: '1', label: '> 120 mg/dl', description: 'Elevated fasting blood sugar (possible diabetes)' }
+            ],
+            'restecg': [
+                { value: '0', label: 'Normal', description: 'Normal ECG reading' },
+                { value: '1', label: 'ST-T Wave Abnormality', description: 'Mild ECG abnormality' },
+                { value: '2', label: 'Left Ventricular Hypertrophy', description: 'Thickening of the heart\'s left ventricle' }
+            ],
+            'exang': [
+                { value: '0', label: 'No', description: 'No exercise-induced chest pain' },
+                { value: '1', label: 'Yes', description: 'Experiences chest pain during exercise' }
+            ],
+            'slope': [
+                { value: '0', label: 'Upsloping', description: 'Normal ST segment slope' },
+                { value: '1', label: 'Flat', description: 'Abnormal ST segment response' },
+                { value: '2', label: 'Downsloping', description: 'Concerning ST segment response' }
+            ],
+            'ca': Array.from({length: 4}, (_, i) => ({
+                value: i.toString(),
+                label: i.toString(),
+                description: i === 0 ? 'No major vessels affected' : 
+                             i === 1 ? '1 major vessel with reduced blood flow' :
+                             `${i} major vessels with reduced blood flow`
+            })),
+            'thal': [
+                { value: '1', label: 'Normal', description: 'Normal blood flow' },
+                { value: '2', label: 'Fixed Defect', description: 'Permanent blood flow defect' },
+                { value: '3', label: 'Reversible Defect', description: 'Temporary blood flow defect' }
+            ]
+        };
+
+        // Generate form fields
+        function generateFormFields() {
+            const leftCol = document.querySelector('.col-md-6:first-child');
+            const rightCol = document.querySelector('.col-md-6:last-child');
+            
+            // First half of features in left column
+            const firstHalf = Math.ceil(featureNames.length / 2);
+            
+            featureNames.forEach((feature, index) => {
+                const col = index < firstHalf ? leftCol : rightCol;
+                const div = document.createElement('div');
+                div.className = 'mb-3';
+                
+                const label = document.createElement('label');
+                label.className = 'form-label';
+                label.htmlFor = feature;
+                label.textContent = featureLabels[feature];
+                
+                div.appendChild(label);
+                
+                if (feature in featureOptions) {
+                    const select = document.createElement('select');
+                    select.className = 'form-select';
+                    select.id = feature;
+                    select.name = feature;
+                    select.required = true;
+                    select.setAttribute('data-bs-toggle', 'tooltip');
+                    select.setAttribute('data-bs-placement', 'top');
+                    select.setAttribute('title', featureDescriptions[feature]);
+
+                    // Add default option
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = `Select ${featureLabels[feature]}`;
+                    defaultOption.selected = true;
+                    defaultOption.disabled = true;
+                    select.appendChild(defaultOption);
+
+                    // Add options with descriptions
+                    featureOptions[feature].forEach(option => {
+                        const optionElement = document.createElement('option');
+                        optionElement.value = option.value;
+                        optionElement.textContent = option.label;
+                        optionElement.title = option.description || '';
+                        select.appendChild(optionElement);
+                    });
+
+                    // Add help icon
+                    const helpIcon = document.createElement('i');
+                    helpIcon.className = 'bi bi-info-circle ms-2';
+                    helpIcon.setAttribute('data-bs-toggle', 'tooltip');
+                    helpIcon.setAttribute('data-bs-placement', 'top');
+                    helpIcon.setAttribute('title', featureDescriptions[feature]);
+                    helpIcon.style.cursor = 'help';
+                    helpIcon.style.color = '#0d6efd';
+                    
+                    const helpContainer = document.createElement('div');
+                    helpContainer.className = 'd-flex align-items-center';
+                    helpContainer.appendChild(select);
+                    helpContainer.appendChild(helpIcon);
+                    
+                    div.appendChild(helpContainer);
+                } else {
+                    const inputGroupDiv = document.createElement('div');
+                    inputGroupDiv.className = 'input-group';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.className = 'form-control';
+                    input.id = feature;
+                    input.name = feature;
+                    input.required = true;
+                    input.step = 'any';
+                    input.placeholder = `Enter ${featureLabels[feature]}`;
+                    input.setAttribute('data-bs-toggle', 'tooltip');
+                    input.setAttribute('data-bs-placement', 'top');
+                    input.setAttribute('title', featureDescriptions[feature]);
+                    
+                    // Add help icon
+                    const helpIcon = document.createElement('span');
+                    helpIcon.className = 'input-group-text';
+                    helpIcon.setAttribute('data-bs-toggle', 'tooltip');
+                    helpIcon.setAttribute('data-bs-placement', 'left');
+                    helpIcon.setAttribute('title', featureDescriptions[feature]);
+                    helpIcon.style.cursor = 'help';
+                    helpIcon.innerHTML = '<i class="bi bi-info-circle"></i>';
+                    
+                    inputGroupDiv.appendChild(input);
+                    inputGroupDiv.appendChild(helpIcon);
+                    div.appendChild(inputGroupDiv);
+                    
+                    // Add unit information and set input attributes
+                    if (feature === 'age') {
+                        input.placeholder += ' (years)';
+                        input.min = '0';
+                        input.max = '120';
+                    } else if (feature === 'trestbps') {
+                        input.placeholder += ' (mm Hg)';
+                        input.min = '80';
+                        input.max = '200';
+                    } else if (feature === 'chol') {
+                        input.placeholder += ' (mg/dl)';
+                        input.min = '100';
+                        input.max = '600';
+                    } else if (feature === 'thalach') {
+                        // No min/max restrictions for thalach (Maximum Heart Rate)
+                        input.removeAttribute('min');
+                        input.removeAttribute('max');
+                        input.placeholder += ' (bpm)';
+                    } else if (feature === 'oldpeak') {
+                        input.placeholder += ' (ST depression)';
+                        input.step = '0.1';
+                        input.min = '0';
+                        input.max = '10';
+                    }
+                    
+                    div.appendChild(input);
+                }
+                
+                col.appendChild(div);
+            });
+            
+            // Set test values for development
+            setTestValues();
+        }
+        
+        // Set test values (for development)
+        function setTestValues() {
+            const testValues = {
+                'age': '52',
+                'sex': '1',
+                'cp': '2',
+                'trestbps': '128',
+                'chol': '205',
+                'fbs': '1',
+                'restecg': '0',
+                'thalach': '184',
+                'exang': '0',
+                'oldpeak': '0.0',
+                'slope': '2',
+                'ca': '0',
+                'thal': '2'
+            };
+            
+            for (const [id, value] of Object.entries(testValues)) {
+                const element = document.getElementById(id);
+                if (element) {
+                    element.value = value;
+                }
+            }
+        }
+        
+        // Initialize the form and tooltips
+        document.addEventListener('DOMContentLoaded', function() {
+            generateFormFields();
+            
+            // Set default values for testing
+            setTestValues();
+            
+            // Initialize tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl, {
+                    trigger: 'hover focus',
+                    html: true
+                });
+            });
+            
+            // Add input validation
+            document.querySelectorAll('input[type="number"]').forEach(input => {
+                input.addEventListener('input', function() {
+                    const min = parseFloat(this.min);
+                    const max = parseFloat(this.max);
+                    const value = parseFloat(this.value);
+                    
+                    if (!isNaN(min) && value < min) {
+                        this.value = min;
+                    } else if (!isNaN(max) && value > max) {
+                        this.value = max;
+                    }
+                });
+            });
+            
+            // Add form submission handler
+            document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Show loading state
+                const submitButton = this.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton.innerHTML;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Predicting...';
+                
+                try {
+                    // Get form data
+                    const formData = {};
+                    featureNames.forEach(feature => {
+                        formData[feature] = document.getElementById(feature).value;
+                    });
+                    
+                    // Make prediction request
+                    const response = await fetch('/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (response.ok) {
+                        // Update UI with results
+                        displayResults(result);
+                    } else {
+                        throw new Error(result.error || 'Failed to get prediction');
+                    }
+                } catch (error) {
+                    console.error('Prediction error:', error);
+                    alert('Error: ' + error.message);
+                } finally {
+                    // Reset button state
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalButtonText;
+                }
+            });
+        });
+        
+        function displayResults(result) {
+            const resultCard = document.getElementById('resultCard');
+            const predictionText = document.getElementById('predictionText');
+            const riskBar = document.getElementById('riskBar');
+            const riskPercentage = document.getElementById('riskPercentage');
+            const riskFactorsList = document.getElementById('riskFactorsList');
+            const modelPredictions = document.getElementById('modelPredictions');
+            
+            // Calculate risk percentage (0-100%)
+            const riskPercent = Math.round((result.probability || 0) * 100);
+            
+            // Determine risk level and set appropriate styling
+            let riskLevel, riskClass, iconClass, riskDescription;
+            
+            if (riskPercent >= 70) {
+                riskLevel = 'High Risk';
+                riskClass = 'danger';
+                iconClass = 'exclamation-triangle';
+                riskDescription = 'This indicates a significant risk of heart disease. Please consult a healthcare professional.';
+            } else if (riskPercent >= 40) {
+                riskLevel = 'Moderate Risk';
+                riskClass = 'warning';
+                iconClass = 'exclamation-circle';
+                riskDescription = 'This indicates some risk factors for heart disease. Consider lifestyle changes and monitoring.';
+            } else if (riskPercent >= 20) {
+                riskLevel = 'Mild Risk';
+                riskClass = 'info';
+                iconClass = 'info-circle';
+                riskDescription = 'Low to moderate risk. Maintain a healthy lifestyle to reduce risk factors.';
+            } else {
+                riskLevel = 'Low Risk';
+                riskClass = 'success';
+                iconClass = 'check-circle';
+                riskDescription = 'Low risk of heart disease. Continue with healthy habits.';
+            }
+            
+            // Update prediction text and styling
+            predictionText.innerHTML = `
+                <i class="bi bi-${iconClass} text-${riskClass} me-2"></i>
+                <span>${riskLevel} of Heart Disease</span>
+                <div class="small text-muted mt-1">${riskDescription}</div>
+            `;
+            predictionText.className = `text-${riskClass} mb-3`;
+            
+            // Update risk bar with appropriate color based on risk level
+            riskBar.style.width = `${riskPercent}%`;
+            riskBar.setAttribute('aria-valuenow', riskPercent);
+            riskBar.className = `progress-bar bg-${riskClass}`;
+            riskPercentage.textContent = `${riskPercent}%`;
+            riskPercentage.className = `fw-bold mt-2 text-${riskClass}`;
+            
+            // Update risk factors
+            riskFactorsList.innerHTML = '';
+            if (result.risk_factors && result.risk_factors.length > 0) {
+                result.risk_factors.forEach(factor => {
+                    const li = document.createElement('li');
+                    li.textContent = factor;
+                    riskFactorsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = 'No significant risk factors identified.';
+                riskFactorsList.appendChild(li);
+            }
+            
+            // Update model predictions
+            modelPredictions.innerHTML = '';
+            if (result.model_predictions) {
+                for (const [model, prob] of Object.entries(result.model_predictions)) {
+                    const modelName = model.charAt(0).toUpperCase() + model.slice(1).replace('_', ' ');
+                    const modelProb = Math.round(prob * 100);
+                    
+                    const modelDiv = document.createElement('div');
+                    modelDiv.className = 'mb-2';
+                    
+                    const modelNameSpan = document.createElement('span');
+                    modelNameSpan.className = 'fw-bold';
+                    modelNameSpan.textContent = `${modelName}: `;
+                    
+                    const modelProbSpan = document.createElement('span');
+                    modelProbSpan.textContent = `${modelProb}%`;
+                    
+                    if (modelProb > 50) {
+                        modelProbSpan.className = 'text-danger';
+                    } else {
+                        modelProbSpan.className = 'text-success';
+                    }
+                    
+                    modelDiv.appendChild(modelNameSpan);
+                    modelDiv.appendChild(modelProbSpan);
+                    
+                    // Add a small progress bar for each model
+                    const progressDiv = document.createElement('div');
+                    progressDiv.className = 'progress';
+                    progressDiv.style.height = '5px';
+                    
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'progress-bar';
+                    progressBar.role = 'progressbar';
+                    progressBar.style.width = `${modelProb}%`;
+                    
+                    progressDiv.appendChild(progressBar);
+                    modelDiv.appendChild(progressDiv);
+                    
+                    modelPredictions.appendChild(modelDiv);
+                }
+            }
+            
+            // Show results
+            resultCard.style.display = 'block';
+            resultCard.scrollIntoView({ behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
